@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cadastro de Produtos — Loja de Confecção</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:        #faf7f2;
+    --surface:   #ffffff;
+    --border:    #e8e0d5;
+    --border-focus: #c9a96e;
+    --text:      #1a1510;
+    --muted:     #7a6e62;
+    --accent:    #c9a96e;
+    --accent-dark:#a07840;
+    --danger:    #c0392b;
+    --danger-bg: #fdf0ee;
+    --success:   #27ae60;
+    --success-bg:#edfaf3;
+    --warn:      #e67e22;
+    --warn-bg:   #fef8ed;
+    --radius:    10px;
+    --shadow:    0 4px 24px rgba(0,0,0,.07);
+    --shadow-lg: 0 8px 40px rgba(0,0,0,.13);
+    --font-head: 'DM Serif Display', serif;
+    --font-body: 'DM Sans', sans-serif;
+    --transition: .22s cubic-bezier(.4,0,.2,1);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; padding: 0 0 60px; }
+
+  /* HEADER */
+  header { background: var(--text); color: #fff; padding: 18px 40px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+  header .logo { font-family: var(--font-head); font-size: 1.35rem; letter-spacing: .01em; color: var(--accent); }
+  header .logo span { color: #fff; }
+  header .breadcrumb { font-size: .8rem; color: #aaa; margin-left: auto; }
+  header .breadcrumb b { color: #ddd; }
+
+  /* ═══ HEURÍSTICA 1: VISIBILIDADE DO ESTADO DO SISTEMA ═══ */
+  /* Barra de progresso global */
+  #progress-bar-wrap { height: 4px; background: var(--border); }
+  #progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-dark)); width: 0%; transition: width .4s ease; }
+
+  /* Steps */
+  .steps-bar { display: flex; justify-content: center; gap: 0; padding: 28px 40px 0; max-width: 720px; margin: 0 auto; }
+  .step-item { display: flex; align-items: center; flex: 1; }
+  .step-item:last-child { flex: none; }
+  .step-circle { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: .78rem; font-weight: 600; color: var(--muted); background: var(--surface); transition: var(--transition); position: relative; z-index: 1; flex-shrink: 0; }
+  .step-circle svg { display: none; width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .step-label { font-size: .72rem; color: var(--muted); white-space: nowrap; margin-left: 8px; font-weight: 500; transition: var(--transition); }
+  .step-line { flex: 1; height: 2px; background: var(--border); margin: 0 8px; transition: background .4s; }
+  .step-item.active .step-circle { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .step-item.active .step-label { color: var(--text); font-weight: 600; }
+  .step-item.done .step-circle { border-color: var(--success); background: var(--success); color: #fff; }
+  .step-item.done .step-circle .num { display: none; }
+  .step-item.done .step-circle svg { display: block; }
+  .step-item.done .step-line { background: var(--success); }
+  .step-item.done .step-label { color: var(--success); }
+
+  /* CARD */
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); max-width: 720px; margin: 24px auto 0; padding: 36px 40px; }
+  .card-title { font-family: var(--font-head); font-size: 1.5rem; margin-bottom: 4px; }
+  .card-sub { font-size: .85rem; color: var(--muted); margin-bottom: 28px; }
+
+  /* FORM */
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .form-row.single { grid-template-columns: 1fr; }
+  .form-row.triple { grid-template-columns: 1fr 1fr 1fr; }
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+  label { font-size: .8rem; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  label .req { color: var(--danger); font-size: .85em; }
+  label .hint-icon { width: 15px; height: 15px; border-radius: 50%; background: var(--border); color: var(--muted); font-size: .65rem; display: inline-flex; align-items: center; justify-content: center; cursor: help; transition: var(--transition); font-weight: 700; }
+  label .hint-icon:hover { background: var(--accent); color: #fff; }
+  input, select, textarea { font-family: var(--font-body); font-size: .9rem; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); outline: none; transition: border-color var(--transition), box-shadow var(--transition); width: 100%; }
+  input:focus, select:focus, textarea:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(201,169,110,.15); background: #fff; }
+
+  /* ═══ HEURÍSTICA 2: PREVENÇÃO DE ERROS ═══ */
+  /* Estados de validação visual */
+  input.error, select.error, textarea.error { border-color: var(--danger); background: var(--danger-bg); }
+  input.error:focus, select.error:focus { box-shadow: 0 0 0 3px rgba(192,57,43,.12); }
+  input.valid, select.valid { border-color: var(--success); }
+  .field-msg { font-size: .75rem; min-height: 18px; display: flex; align-items: center; gap: 5px; transition: var(--transition); }
+  .field-msg.err { color: var(--danger); }
+  .field-msg.ok  { color: var(--success); }
+  .field-msg.tip { color: var(--muted); }
+  .field-msg svg { width: 13px; height: 13px; flex-shrink: 0; }
+  .char-counter { font-size: .72rem; color: var(--muted); text-align: right; margin-top: -2px; }
+  .char-counter.warn-count { color: var(--warn); }
+  .char-counter.over { color: var(--danger); }
+
+  /* ═══ HEURÍSTICA 3: RECONHECIMENTO EM VEZ DE LEMBRANÇA ═══ */
+  /* Seleção de categoria com ícones visuais */
+  .category-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 2px; }
+  .cat-btn { display: flex; align-items: center; gap: 7px; padding: 8px 16px; border: 1.5px solid var(--border); border-radius: 50px; background: var(--bg); cursor: pointer; font-family: var(--font-body); font-size: .82rem; font-weight: 500; color: var(--muted); transition: var(--transition); user-select: none; }
+  .cat-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .cat-btn.selected { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(201,169,110,.35); }
+  .cat-btn .icon { font-size: 1.1em; }
+
+  /* Upload */
+  .upload-zone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 32px 20px; text-align: center; cursor: pointer; transition: var(--transition); background: var(--bg); position: relative; }
+  .upload-zone:hover { border-color: var(--accent); background: #fdf8f0; }
+  .upload-zone .up-icon { font-size: 2rem; margin-bottom: 8px; }
+  .upload-zone p { font-size: .82rem; color: var(--muted); }
+  .upload-zone p b { color: var(--accent); }
+  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  #preview-img { display: none; max-height: 120px; border-radius: 8px; margin: 10px auto 0; object-fit: cover; box-shadow: var(--shadow); }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+
+  /* BUTTONS */
+  .btn-row { display: flex; justify-content: flex-end; gap: 12px; margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border); }
+  .btn { font-family: var(--font-body); font-size: .88rem; font-weight: 600; padding: 11px 24px; border-radius: var(--radius); border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: var(--transition); }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+  .btn-primary { background: var(--text); color: #fff; }
+  .btn-primary:hover { background: #2d2620; box-shadow: 0 4px 16px rgba(0,0,0,.2); }
+  .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; box-shadow: none; }
+
+  /* Spinner de carregamento — Heurística 1 */
+  .spinner { display: none; width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast — Heurística 1 */
+  #toast-wrap { position: fixed; top: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+  .toast { min-width: 260px; max-width: 380px; background: var(--text); color: #fff; border-radius: var(--radius); padding: 14px 18px; display: flex; align-items: flex-start; gap: 12px; box-shadow: var(--shadow-lg); font-size: .85rem; animation: slideIn .3s ease forwards; pointer-events: auto; }
+  .toast.success { background: var(--success); }
+  .toast.error   { background: var(--danger); }
+  .toast.warning { background: var(--warn); }
+  .toast .t-icon { font-size: 1.2rem; flex-shrink: 0; }
+  .toast .t-body b { display: block; font-weight: 600; margin-bottom: 2px; font-size: .9rem; }
+  .toast .t-body span { opacity: .88; }
+  .toast.hide { animation: slideOut .3s ease forwards; }
+  @keyframes slideIn  { from { transform: translateX(110%); opacity:0; } to { transform: translateX(0); opacity:1; } }
+  @keyframes slideOut { from { transform: translateX(0); opacity:1; } to { transform: translateX(110%); opacity:0; } }
+
+  /* Modal — Heurística 2 */
+  #modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(20,15,10,.55); backdrop-filter: blur(3px); z-index: 500; align-items: center; justify-content: center; }
+  #modal-backdrop.open { display: flex; }
+  .modal { background: var(--surface); border-radius: 14px; padding: 36px 40px; max-width: 420px; width: 90%; box-shadow: var(--shadow-lg); animation: popIn .25s cubic-bezier(.34,1.56,.64,1) forwards; }
+  @keyframes popIn { from { transform: scale(.88); opacity:0; } to { transform: scale(1); opacity:1; } }
+  .modal h3 { font-family: var(--font-head); font-size: 1.3rem; margin-bottom: 10px; }
+  .modal p  { font-size: .87rem; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
+  .modal-summary { background: var(--bg); border-radius: 8px; padding: 14px 16px; font-size: .82rem; margin-bottom: 24px; border: 1px solid var(--border); line-height: 1.7; }
+  .modal-btns { display: flex; gap: 12px; justify-content: flex-end; }
+
+  /* Badge heurística */
+  .hbadge { display: inline-flex; align-items: center; gap: 5px; font-size: .68rem; font-weight: 600; padding: 3px 9px; border-radius: 50px; background: #f0e9da; color: var(--accent-dark); border: 1px solid #e0d0b5; letter-spacing: .02em; text-transform: uppercase; }
+  .section-label { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .section-label h2 { font-family: var(--font-head); font-size: 1.1rem; }
+
+  /* Tooltip — Heurística 3 */
+  [data-tooltip] { position: relative; }
+  [data-tooltip]:hover::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; font-size: .72rem; font-family: var(--font-body); padding: 5px 10px; border-radius: 6px; white-space: nowrap; pointer-events: none; z-index: 20; font-weight: 400; }
+
+  /* Indicador de estoque — Heurística 1 */
+  .stock-indicator { display: flex; align-items: center; gap: 8px; font-size: .8rem; font-weight: 500; padding: 8px 12px; border-radius: 8px; margin-top: 6px; transition: var(--transition); min-height: 36px; }
+  .stock-indicator.low  { background: var(--danger-bg); color: var(--danger); }
+  .stock-indicator.mid  { background: var(--warn-bg);   color: var(--warn); }
+  .stock-indicator.high { background: var(--success-bg);color: var(--success); }
+  .stock-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: currentColor; }
+
+  @media (max-width: 600px) {
+    header { padding: 16px 20px; }
+    .card  { padding: 24px 20px; margin: 16px 12px 0; }
+    .form-row { grid-template-columns: 1fr; }
+    .form-row.triple { grid-template-columns: 1fr 1fr; }
+    .steps-bar { padding: 20px 20px 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="toast-wrap"></div>
+
+<!-- Modal de confirmação — Heurística 2: Prevenção de Erros -->
+<div id="modal-backdrop">
+  <div class="modal">
+    <h3>Confirmar cadastro?</h3>
+    <p>Revise as informações abaixo antes de salvar. Você poderá editar o produto depois.</p>
+    <div class="modal-summary" id="modal-summary"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal()">Voltar e revisar</button>
+      <button class="btn btn-primary" onclick="confirmSave()"><span>Confirmar</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">Gigi's  <span>Clothes</span></div>
+  <div class="breadcrumb">Produtos / <b>Novo cadastro</b></div>
+</header>
+
+<!-- Barra de progresso — Heurística 1: Visibilidade do Estado do Sistema -->
+<div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+
+<!-- Indicador de etapas — Heurística 1 -->
+<div class="steps-bar">
+  <div class="step-item active" id="step1">
+    <div class="step-circle">
+      <span class="num">1</span>
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <span class="step-label">Identificação</span>
+    <div class="step-line"></div>
+  </div>
+  <div class="step-item" id="step2">
+    <div class="step-circle">
+      <span class="num">2</span>
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <span class="step-label">Estoque &amp; Preço</span>
+    <div class="step-line"></div>
+  </div>
+  <div class="step-item" id="step3">
+    <div class="step-circle">
+      <span class="num">3</span>
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <span class="step-label">Revisão</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ETAPA 1 — IDENTIFICAÇÃO
+     HEURÍSTICA 3: Reconhecimento em vez de Lembrança
+════════════════════════════════════════════════ -->
+<div class="card" id="card-step1">
+  <div class="section-label">
+    <h2>Identificação do produto</h2>
+    <!-- <span class="hbadge">🧠 H3 — Reconhecimento</span> -->
+  </div>
+  <p class="card-sub">Campos com <span style="color:var(--danger)">*</span> são obrigatórios.</p>
+
+  <!-- Seleção por ícones visuais — Heurística 3 -->
+  <div class="field" style="margin-bottom:20px">
+    <label>Categoria <span class="req">*</span></label>
+    <div class="category-grid" id="cat-grid">
+      <button type="button" class="cat-btn" data-cat="Camisas"><span class="icon">👔</span> Camisas</button>
+      <button type="button" class="cat-btn" data-cat="Calças"><span class="icon">👖</span> Calças</button>
+      <button type="button" class="cat-btn" data-cat="Vestidos"><span class="icon">👗</span> Vestidos</button>
+      <button type="button" class="cat-btn" data-cat="Casacos"><span class="icon">🧥</span> Casacos</button>
+      <button type="button" class="cat-btn" data-cat="Acessórios"><span class="icon">👜</span> Acessórios</button>
+      <button type="button" class="cat-btn" data-cat="Calçados"><span class="icon">👠</span> Calçados</button>
+    </div>
+    <div class="field-msg tip" id="msg-cat">Nenhuma categoria selecionada</div>
+  </div>
+
+  <div class="form-row">
+    <div class="field">
+      <label for="nome">Nome do produto <span class="req">*</span></label>
+      <input type="text" id="nome" placeholder="Ex: Blusa Linho Off-White" maxlength="60"
+             oninput="validateNome(this); updateProgress()" />
+      <div class="char-counter" id="nome-counter">0 / 60</div>
+      <div class="field-msg tip" id="msg-nome">Mínimo 3 caracteres</div>
+    </div>
+    <div class="field">
+      <label for="cod">Código SKU
+        <!-- Tooltip contextual — Heurística 3 -->
+        <span class="hint-icon" data-tooltip="Código único interno: CAT-MAT-000">?</span>
+      </label>
+      <input type="text" id="cod" placeholder="Ex: BLS-LNH-001"
+             oninput="validateCod(this); updateProgress()" />
+      <div class="field-msg tip" id="msg-cod">Formato sugerido: CAT-MAT-000</div>
+    </div>
+  </div>
+
+  <div class="form-row single" style="margin-top:16px">
+    <div class="field">
+      <label for="desc">Descrição</label>
+      <textarea id="desc" rows="3" placeholder="Descreva o produto: tecido, estilo, ocasião..."
+                maxlength="300" oninput="countDesc(this)"></textarea>
+      <div class="char-counter" id="desc-counter">0 / 300</div>
+    </div>
+  </div>
+
+  <div class="form-row" style="margin-top:16px">
+    <div class="field">
+      <label for="fornec">Fornecedor</label>
+      <!-- Select com opções pré-definidas — Heurística 3: evita erros de digitação -->
+      <select id="fornec">
+        <option value="">— Selecione o fornecedor —</option>
+        <option>Têxtil São Paulo</option>
+        <option>Confecções Norte</option>
+        <option>Import Fashion</option>
+        <option>Ateliê Próprio</option>
+      </select>
+      <div class="field-msg tip">Selecione da lista cadastrada</div>
+    </div>
+    <div class="field">
+      <label for="temporada">Temporada</label>
+      <select id="temporada">
+        <option value="">— Selecione —</option>
+        <option>Verão 2025</option>
+        <option>Inverno 2025</option>
+        <option>Verão 2026</option>
+        <option>Coleção Perene</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="field" style="margin-top:16px">
+    <label>Foto do produto</label>
+    <div class="upload-zone">
+      <input type="file" accept="image/*" onchange="previewImage(this)" />
+      <div class="up-icon">📷</div>
+      <p>Arraste ou <b>clique para selecionar</b></p>
+      <p style="margin-top:4px;font-size:.75rem">JPG, PNG — máx. 5 MB</p>
+      <img id="preview-img" alt="Prévia" />
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="goTo(2)">Próximo: Estoque &amp; Preço →</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ETAPA 2 — ESTOQUE & PREÇO
+     HEURÍSTICA 1: Visibilidade do Estado do Sistema
+════════════════════════════════════════════════ -->
+<div class="card" id="card-step2" style="display:none">
+  <div class="section-label">
+    <h2>Estoque &amp; Preço</h2>
+    <!-- <span class="hbadge">👁 H1 — Visibilidade do Sistema</span> -->
+  </div>
+  <p class="card-sub">Informe os valores. O sistema calcula a margem e mostra o status do estoque em tempo real.</p>
+
+  <div class="form-row triple">
+    <div class="field">
+      <label for="preco_custo">Preço de custo (R$) <span class="req">*</span></label>
+      <input type="number" id="preco_custo" placeholder="0,00" min="0" step="0.01"
+             oninput="calcMargem(); validatePreco(this); updateProgress()" />
+      <div class="field-msg tip" id="msg-pcusto">Valor pago ao fornecedor</div>
+    </div>
+    <div class="field">
+      <label for="preco_venda">Preço de venda (R$) <span class="req">*</span></label>
+      <input type="number" id="preco_venda" placeholder="0,00" min="0" step="0.01"
+             oninput="calcMargem(); validatePrecoVenda(this); updateProgress()" />
+      <div class="field-msg tip" id="msg-pvenda">Valor exibido ao cliente</div>
+    </div>
+    <div class="field">
+      <!-- Campo calculado automaticamente — Heurística 1: feedback imediato -->
+      <label>Margem de lucro</label>
+      <input type="text" id="margem" readonly placeholder="—" style="background:#f5f2ec;cursor:default" />
+      <div class="field-msg tip" id="msg-margem">Calculada automaticamente</div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="form-row">
+    <div class="field">
+      <label for="qtd">Qtd. em estoque <span class="req">*</span></label>
+      <input type="number" id="qtd" placeholder="0" min="0"
+             oninput="updateStockStatus(); validateQtd(this); updateProgress()" />
+      <!-- Indicador de status de estoque — Heurística 1 -->
+      <div class="stock-indicator" id="stock-indicator" style="display:none"></div>
+    </div>
+    <div class="field">
+      <label for="qtd_min">Estoque mínimo
+        <span class="hint-icon" data-tooltip="Alerta de reposição ao atingir este limite">?</span>
+      </label>
+      <input type="number" id="qtd_min" placeholder="5" min="0" value="5"
+             oninput="updateStockStatus()" />
+      <div class="field-msg tip">Sistema alerta ao atingir este valor</div>
+    </div>
+  </div>
+
+  <div class="form-row" style="margin-top:8px">
+    <div class="field">
+      <label for="tamanhos">Tamanhos disponíveis</label>
+      <select id="tamanhos">
+        <option value="">— Selecione —</option>
+        <option>P / M / G</option>
+        <option>PP / P / M / G / GG</option>
+        <option>Numeração 36–46</option>
+        <option>Tamanho único</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="cor">Cor principal</label>
+      <select id="cor">
+        <option value="">— Selecione —</option>
+        <option>⚪ Branco</option>
+        <option>⚫ Preto</option>
+        <option>🔵 Azul</option>
+        <option>🔴 Vermelho</option>
+        <option>🟢 Verde</option>
+        <option>🟤 Bege</option>
+        <option>🎨 Estampado</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="goTo(1)">← Voltar</button>
+    <button class="btn btn-primary" onclick="goTo(3)">Próximo: Revisar →</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     ETAPA 3 — REVISÃO
+     HEURÍSTICA 2: Prevenção de Erros
+════════════════════════════════════════════════ -->
+<div class="card" id="card-step3" style="display:none">
+  <div class="section-label">
+    <h2>Revisar e salvar</h2>
+    <!-- <span class="hbadge">🛡 H2 — Prevenção de Erros</span> -->
+  </div>
+  <p class="card-sub">Verifique os dados antes de salvar. Campos obrigatórios faltando são destacados em vermelho.</p>
+
+  <div id="review-panel" style="background:var(--bg);border-radius:var(--radius);padding:20px 22px;border:1px solid var(--border);font-size:.85rem;line-height:2"></div>
+
+  <!-- Lista de erros pré-submissão — Heurística 2 -->
+  <div id="error-list" style="display:none;margin-top:16px;background:var(--danger-bg);border:1px solid #f5c6c2;border-radius:var(--radius);padding:16px 20px;">
+    <b style="color:var(--danger);font-size:.85rem">⚠️ Corrija os campos abaixo antes de salvar:</b>
+    <ul id="error-items" style="margin-top:8px;padding-left:18px;font-size:.82rem;color:var(--danger);line-height:1.9"></ul>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="goTo(2)">← Voltar</button>
+    <button class="btn btn-primary" id="btn-save" onclick="trySubmit()">
+      <div class="spinner" id="spinner"></div>
+      <span id="btn-label">Salvar produto</span>
+    </button>
+  </div>
+</div>
+
+<script>
+let selectedCat = '';
+
+function goTo(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById(`card-step${i}`).style.display = i === n ? 'block' : 'none';
+    const el = document.getElementById(`step${i}`);
+    el.classList.remove('active','done');
+    if (i < n) el.classList.add('done');
+    if (i === n) el.classList.add('active');
+  });
+  if (n === 3) buildReview();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  updateProgress();
+}
+
+function updateProgress() {
+  const ok = [
+    document.getElementById('nome').value.trim().length >= 3,
+    !!selectedCat,
+    !!document.getElementById('preco_venda').value,
+    !!document.getElementById('qtd').value,
+  ];
+  document.getElementById('progress-bar').style.width = (ok.filter(Boolean).length / ok.length * 100) + '%';
+}
+
+// Categoria — Heurística 3
+document.getElementById('cat-grid').addEventListener('click', e => {
+  const btn = e.target.closest('.cat-btn');
+  if (!btn) return;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedCat = btn.dataset.cat;
+  const msg = document.getElementById('msg-cat');
+  msg.className = 'field-msg ok';
+  msg.innerHTML = svgCheck() + `Categoria: <b>${selectedCat}</b>`;
+  updateProgress();
+});
+
+function svgCheck() { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`; }
+function svgX()     { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`; }
+
+function setField(el, msgEl, state, icon, text) {
+  el.classList.remove('error','valid');
+  msgEl.className = `field-msg ${state}`;
+  msgEl.innerHTML = icon + text;
+  if (state === 'err') el.classList.add('error');
+  if (state === 'ok')  el.classList.add('valid');
+}
+
+function validateNome(el) {
+  const v = el.value.trim(), msg = document.getElementById('msg-nome');
+  document.getElementById('nome-counter').textContent = `${el.value.length} / 60`;
+  if (!v) { setField(el, msg, 'tip', '', 'Mínimo 3 caracteres'); return; }
+  if (v.length < 3) { setField(el, msg, 'err', svgX(), 'Nome muito curto'); return; }
+  setField(el, msg, 'ok', svgCheck(), 'Nome válido');
+}
+
+function validateCod(el) {
+  const v = el.value.trim(), msg = document.getElementById('msg-cod');
+  if (!v) { setField(el, msg, 'tip', '', 'Formato sugerido: CAT-MAT-000'); return; }
+  if (/^[A-Z]{2,4}-[A-Z]{2,4}-\d{3}$/i.test(v)) setField(el, msg, 'ok', svgCheck(), 'Código válido');
+  else setField(el, msg, 'err', svgX(), 'Ex: BLS-LNH-001');
+}
+
+function validatePreco(el) {
+  const msg = document.getElementById('msg-pcusto');
+  if (!el.value) { setField(el, msg, 'tip', '', 'Valor pago ao fornecedor'); return; }
+  if (+el.value <= 0) { setField(el, msg, 'err', svgX(), 'Informe um valor maior que zero'); return; }
+  setField(el, msg, 'ok', svgCheck(), 'Valor registrado');
+}
+
+function validatePrecoVenda(el) {
+  const msg = document.getElementById('msg-pvenda');
+  const custo = +document.getElementById('preco_custo').value;
+  if (!el.value) { setField(el, msg, 'tip', '', 'Valor exibido ao cliente'); return; }
+  if (+el.value <= 0) { setField(el, msg, 'err', svgX(), 'Informe um valor maior que zero'); return; }
+  // Heurística 2: aviso proativo de margem negativa
+  if (custo > 0 && +el.value < custo) { setField(el, msg, 'err', svgX(), '⚠️ Preço abaixo do custo!'); return; }
+  setField(el, msg, 'ok', svgCheck(), 'Valor registrado');
+}
+
+function validateQtd(el) {
+  if (el.value === '') { el.classList.remove('error','valid'); return; }
+  if (+el.value < 0) { el.classList.add('error'); el.classList.remove('valid'); }
+  else { el.classList.remove('error'); el.classList.add('valid'); }
+}
+
+function countDesc(el) {
+  const c = document.getElementById('desc-counter'), n = el.value.length;
+  c.textContent = `${n} / 300`;
+  c.className = 'char-counter' + (n > 270 ? ' warn-count' : '') + (n >= 300 ? ' over' : '');
+}
+
+// Cálculo em tempo real — Heurística 1
+function calcMargem() {
+  const custo = +document.getElementById('preco_custo').value;
+  const venda = +document.getElementById('preco_venda').value;
+  const el = document.getElementById('margem'), msg = document.getElementById('msg-margem');
+  if (!custo || !venda) { el.value = '—'; el.style.color = ''; msg.textContent = 'Calculada automaticamente'; return; }
+  const pct = ((venda - custo) / custo * 100).toFixed(1);
+  el.value = `${pct}%`;
+  if (+pct < 0)       { el.style.color = 'var(--danger)'; msg.innerHTML = svgX() + 'Margem negativa!'; }
+  else if (+pct < 20) { el.style.color = 'var(--warn)';   msg.innerHTML = '⚠️ Margem baixa'; }
+  else                { el.style.color = 'var(--success)'; msg.innerHTML = svgCheck() + 'Margem saudável'; }
+}
+
+// Status de estoque em tempo real — Heurística 1
+function updateStockStatus() {
+  const qtd = +document.getElementById('qtd').value, min = +document.getElementById('qtd_min').value || 5;
+  const ind = document.getElementById('stock-indicator');
+  if (document.getElementById('qtd').value === '') { ind.style.display = 'none'; return; }
+  ind.style.display = 'flex';
+  if (qtd === 0) {
+    ind.className = 'stock-indicator low';
+    ind.innerHTML = '<span class="stock-dot"></span> Sem estoque — produto indisponível para venda';
+  } else if (qtd <= min) {
+    ind.className = 'stock-indicator mid';
+    ind.innerHTML = `<span class="stock-dot"></span> Estoque baixo — repor em breve (mín: ${min} un.)`;
+  } else {
+    ind.className = 'stock-indicator high';
+    ind.innerHTML = `<span class="stock-dot"></span> Estoque disponível (${qtd} unidades)`;
+  }
+}
+
+function previewImage(input) {
+  const img = document.getElementById('preview-img');
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => { img.src = e.target.result; img.style.display = 'block'; };
+    reader.readAsDataURL(input.files[0]);
+    showToast('info', '📷 Imagem carregada', 'Prévia visível abaixo.', 2500);
+  }
+}
+
+function buildReview() {
+  const rows = [
+    ['Categoria', selectedCat || '—'],
+    ['Nome', document.getElementById('nome').value || '—'],
+    ['SKU', document.getElementById('cod').value || '—'],
+    ['Fornecedor', document.getElementById('fornec').value || '—'],
+    ['Temporada', document.getElementById('temporada').value || '—'],
+    ['Preço de custo', fmtMoney(document.getElementById('preco_custo').value)],
+    ['Preço de venda', fmtMoney(document.getElementById('preco_venda').value)],
+    ['Margem', document.getElementById('margem').value || '—'],
+    ['Estoque', document.getElementById('qtd').value ? document.getElementById('qtd').value + ' un.' : '—'],
+    ['Tamanhos', document.getElementById('tamanhos').value || '—'],
+    ['Cor', document.getElementById('cor').value || '—'],
+  ];
+  document.getElementById('review-panel').innerHTML = rows.map(([k,v]) =>
+    `<div style="display:flex;gap:12px;padding:4px 0;border-bottom:1px solid var(--border)">
+       <span style="min-width:130px;font-weight:600;color:var(--muted)">${k}</span>
+       <span>${v}</span></div>`
+  ).join('');
+}
+
+function fmtMoney(v) { return v ? 'R$ ' + parseFloat(v).toFixed(2).replace('.',',') : '—'; }
+
+function getErrors() {
+  const e = [];
+  if (!selectedCat) e.push('Categoria não selecionada');
+  const nome = document.getElementById('nome').value.trim();
+  if (!nome || nome.length < 3) e.push('Nome do produto inválido ou muito curto');
+  if (!document.getElementById('preco_custo').value || +document.getElementById('preco_custo').value <= 0) e.push('Preço de custo inválido');
+  if (!document.getElementById('preco_venda').value || +document.getElementById('preco_venda').value <= 0) e.push('Preço de venda inválido');
+  if (document.getElementById('preco_venda').value && +document.getElementById('preco_venda').value < +document.getElementById('preco_custo').value) e.push('Preço de venda é menor que o custo');
+  if (document.getElementById('qtd').value === '' || +document.getElementById('qtd').value < 0) e.push('Quantidade em estoque não informada');
+  return e;
+}
+
+// Validação completa antes de salvar — Heurística 2
+function trySubmit() {
+  const errs = getErrors();
+  const errDiv = document.getElementById('error-list');
+  if (errs.length > 0) {
+    errDiv.style.display = 'block';
+    document.getElementById('error-items').innerHTML = errs.map(e => `<li>${e}</li>`).join('');
+    showToast('error', '⚠️ Formulário incompleto', `${errs.length} campo(s) precisam de atenção.`, 4000);
+    errDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  errDiv.style.display = 'none';
+  document.getElementById('modal-summary').innerHTML =
+    `<b>Produto:</b> ${document.getElementById('nome').value}<br>
+     <b>Categoria:</b> ${selectedCat}<br>
+     <b>Preço de venda:</b> ${fmtMoney(document.getElementById('preco_venda').value)}<br>
+     <b>Estoque:</b> ${document.getElementById('qtd').value} unidades`;
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal-backdrop').classList.remove('open'); }
+
+// Feedback de loading ao salvar — Heurística 1
+function confirmSave() {
+  closeModal();
+  const btn = document.getElementById('btn-save'), lbl = document.getElementById('btn-label'), spin = document.getElementById('spinner');
+  btn.disabled = true; spin.style.display = 'block'; lbl.textContent = 'Salvando...';
+  setTimeout(() => {
+    spin.style.display = 'none'; lbl.textContent = '✓ Salvo!';
+    btn.style.background = 'var(--success)';
+    document.getElementById('progress-bar').style.width = '100%';
+    document.getElementById('progress-bar').style.background = 'var(--success)';
+    showToast('success', '✅ Produto cadastrado!', `"${document.getElementById('nome').value}" salvo com sucesso.`, 5000);
+  }, 2200);
+}
+
+function showToast(type, title, msg, dur = 3500) {
+  const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = `toast ${type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : ''}`;
+  t.innerHTML = `<div class="t-icon">${icons[type]||'ℹ️'}</div><div class="t-body"><b>${title}</b><span>${msg}</span></div>`;
+  wrap.appendChild(t);
+  setTimeout(() => { t.classList.add('hide'); setTimeout(() => t.remove(), 300); }, dur);
+}
+</script>
+</body>
+</html>
